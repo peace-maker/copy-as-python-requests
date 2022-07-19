@@ -97,7 +97,7 @@ function handleRequest(har_entry) {
 
     if (request.cookies && request.cookies.length > 0) {
         output += ", cookies={";
-        output += request.cookies.map(c => `"${c.name}": "${c.value}"`).join(", ");
+        output += request.cookies.map(c => `${sanitizePython(c.name)}: ${sanitizePython(c.value)}`).join(", ");
         output += "}";
     }
 
