@@ -3,6 +3,57 @@
 let devtoolInstances = {};
 let browserActionPopup = null;
 
+const ignoreResponseContentTypes = [
+    'image/',
+    'text/css',
+    'text/javascript',
+    'application/javascript',
+    'application/x-javascript',
+    'application/font',
+    'font/'
+];
+const ignoreHeaders = [
+    // https://greenbytes.de/tech/webdav/draft-ietf-httpbis-http2-09.html#HttpRequest
+    ':authority',
+    ':method',
+    ':path',
+    ':scheme',
+    'Accept',
+    'Accept-Encoding',
+    'Accept-Language',
+    'Cache-Control',
+    'Cookie',
+    'Connection',
+    'Host',
+    'If-Modified-Since',
+    'If-None-Match',
+    'Origin',
+    'Pragma',
+    'Referer',
+    'Sec-Fetch-Dest',
+    'Sec-Fetch-Mode',
+    'Sec-Fetch-Site',
+    'Sec-Fetch-User',
+    'TE',
+    'Upgrade-Insecure-Requests',
+    'User-Agent',
+    'sec-ch-ua',
+    'sec-ch-ua-mobile',
+    'sec-ch-ua-platform',
+];
+
+// Fill storage with default values on extension install.
+chrome.runtime.onInstalled.addListener(function(details) {
+    if (details.reason == "install" || details.reason == "update") {
+        chrome.storage.local.set({
+            'ignoreResponseContentTypes': ignoreResponseContentTypes,
+            'ignoreHeaders': ignoreHeaders
+        }, function() {
+            // Saved.
+        });
+    }
+});
+
 function handleOpeningDevtools(port) {
     // assign the listener function to a variable so we can remove it later
     var devToolsListener = function(message, sender, sendResponse) {

@@ -1,41 +1,24 @@
-const ignoreResponseContentTypes = [
-    'image/',
-    'text/css',
-    'text/javascript',
-    'application/javascript',
-    'application/x-javascript',
-    'application/font',
-    'font/'
-];
-const ignoreHeaders = [
-    // https://greenbytes.de/tech/webdav/draft-ietf-httpbis-http2-09.html#HttpRequest
-    ':authority',
-    ':method',
-    ':path',
-    ':scheme',
-    'Accept',
-    'Accept-Encoding',
-    'Accept-Language',
-    'Cache-Control',
-    'Cookie',
-    'Connection',
-    'Host',
-    'If-Modified-Since',
-    'If-None-Match',
-    'Origin',
-    'Pragma',
-    'Referer',
-    'Sec-Fetch-Dest',
-    'Sec-Fetch-Mode',
-    'Sec-Fetch-Site',
-    'Sec-Fetch-User',
-    'TE',
-    'Upgrade-Insecure-Requests',
-    'User-Agent',
-    'sec-ch-ua',
-    'sec-ch-ua-mobile',
-    'sec-ch-ua-platform',
-];
+// In-page cache of the user's options
+let ignoreResponseContentTypes = [];
+let ignoreHeaders = [];
+
+// Initialize the form with the user's option settings
+chrome.storage.local.get(['ignoreResponseContentTypes', 'ignoreHeaders'], (data) => {
+    ignoreResponseContentTypes = data.ignoreResponseContentTypes;
+    ignoreHeaders = data.ignoreHeaders;
+});
+
+// Update cache on change.
+chrome.storage.onChanged.addListener(function (changes, namespace) {
+    if (namespace != 'local') return;
+    for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
+        if (key === 'ignoreResponseContentTypes') {
+            ignoreResponseContentTypes = newValue;
+        } else if (key === 'ignoreHeaders') {
+            ignoreHeaders = newValue;
+        }
+    }
+});
 
 function stripURLSearchParams(urlString) {
     let url = new URL(urlString);
