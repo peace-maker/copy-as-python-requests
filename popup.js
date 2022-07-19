@@ -5,16 +5,20 @@ port.postMessage({"type": "get-requests"});
 port.onMessage.addListener(function(msg) {
     switch (msg.type) {
         case "no-active-tab":
+            setCopyButtonVisible(false);
             printMessage("No active tab.");
             break;
         case "no-devtools-open":
+            setCopyButtonVisible(false);
             printMessage("No DevTools window open.");
             break;
         case "requests":
             const requests = msg.requests;
             if (requests.length > 0) {
+                setCopyButtonVisible(true);
                 printMessage(requests.join("\n"));
             } else {
+                setCopyButtonVisible(false);
                 printMessage("No requests.");
             }
             break;
@@ -25,7 +29,22 @@ port.onMessage.addListener(function(msg) {
     }
 });
 
+document.getElementById('copy').addEventListener('click', function(e) {
+    e.preventDefault();
+    const status = document.getElementById('status');
+    const text = document.getElementById('msg').innerText;
+    navigator.clipboard.writeText(text).then(function() {
+        status.innerText = 'Copied.';
+    }, function(err) {
+        status.innerText = 'Could not copy text: ' + err;
+    });
+});
+
+const setCopyButtonVisible = (visible) => {
+    const copyButton = document.getElementById('copy');
+    copyButton.style.display = visible ? 'block' : 'none';
+};
+
 function printMessage(message) {
-    let msgElement = document.getElementById('msg');
-    msgElement.innerText = message;
+    document.getElementById('msg').innerText = message;
 }
