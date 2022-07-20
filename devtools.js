@@ -90,7 +90,11 @@ function handleRequest(har_entry) {
 
         // Preserve transfer codings in the content type like `application/x-www-form-urlencoded; charset=UTF-8`
         if (postData.mimeType.includes(";")) {
-            output = `# Stripped transfer codings. Original Content-Type: ${postData.mimeType}\n${output}`;
+            // Ignore utf-8 charset, since that's the default.
+            const transferCodings = postData.mimeType.split(";")[1].trim();
+            if (transferCodings.toLowerCase() !== "charset=utf-8") {
+                output = `# Stripped transfer codings. Original Content-Type: ${postData.mimeType}\n${output}`;
+            }
         }
     }
 
