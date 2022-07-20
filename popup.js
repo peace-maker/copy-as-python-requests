@@ -48,3 +48,12 @@ const setCopyButtonVisible = (visible) => {
 function printMessage(message) {
     document.getElementById('msg').innerText = message;
 }
+
+document.querySelector('#go-to-options').addEventListener('click', function(e) {
+    e.preventDefault();
+    if (chrome.runtime.openOptionsPage) {
+        chrome.runtime.openOptionsPage();
+    } else {
+        window.open(chrome.runtime.getURL('options.html'));
+    }
+});
