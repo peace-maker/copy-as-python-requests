@@ -24,6 +24,7 @@ const ignoreHeaders = [
     'Cache-Control',
     'Cookie',
     'Connection',
+    'Content-Length',
     'Host',
     'If-Modified-Since',
     'If-None-Match',
