@@ -2,7 +2,7 @@
 let ignoreResponseContentTypes = [];
 let ignoreHeaders = [];
 
-// Initialize the form with the user's option settings
+// Initialize the request filter settings cache.
 chrome.storage.local.get(['ignoreResponseContentTypes', 'ignoreHeaders'], (data) => {
     ignoreResponseContentTypes = data.ignoreResponseContentTypes;
     ignoreHeaders = data.ignoreHeaders;
@@ -58,6 +58,42 @@ function handleRequest(har_entry) {
         output += "}";
     }
 
+    let stripContentType = true;
+    if (request.postData) {
+        const postData = request.postData;
+        if (postData.mimeType.toLowerCase().startsWith("application/x-www-form-urlencoded")) {
+            output += ", data={";
+            output += postData.params.map(p => `${sanitizePython(p.name)}: ${sanitizePython(p.value)}`).join(", ");
+            output += "}";
+
+        } else if (postData.mimeType.toLowerCase() === "application/json") {
+            output += `, json=${postData.text}`;
+        } else if (postData.mimeType.toLowerCase().startsWith("multipart/form-data")) {
+            output += ", files={";
+            output += postData.params.map(p => {
+                const name = sanitizePython(p.name);
+                const fileName = sanitizePython(p.fileName);
+                const value = sanitizePython(p.value);
+                if (p.contentType) {
+                    return `${name}: (${fileName}, ${value}, ${sanitizePython(p.contentType)})`
+                } else {
+                    return `${name}: (${fileName}, ${value})`
+                }
+            }).join(", ");
+            output += "}";
+        } else {
+            // Best effort to convert the request.
+            output += `, data=${sanitizePython(postData.text)}`;
+            // Don't know what this is, so don't strip the content type.
+            stripContentType = false;
+        }
+
+        // Preserve transfer codings in the content type like `application/x-www-form-urlencoded; charset=UTF-8`
+        if (postData.mimeType.includes(";")) {
+            output = `# Stripped transfer codings. Original Content-Type: ${postData.mimeType}\n${output}`;
+        }
+    }
+
     if (request.headers && request.headers.length > 0) {
         let filteredHeaders = request.headers.filter(h => !ignoreHeaders.some(ignoreHeader => ignoreHeader.toLowerCase() === h.name.toLowerCase()));
         const authHeader = request.headers.find(h => h.name.toLowerCase() === 'authorization');
@@ -70,28 +106,14 @@ function handleRequest(har_entry) {
             } catch {
             }
         }
+        if (stripContentType) {
+            filteredHeaders = filteredHeaders.filter(h => h.name.toLowerCase() !== 'content-type');
+        }
         filteredHeaders = filteredHeaders.map(h => `${sanitizePython(h.name)}: ${sanitizePython(h.value)}`);
         if (filteredHeaders.length > 0) {
             output += ", headers={";
             output += filteredHeaders.join(", ");
             output += "}";
-        }
-    }
-
-    if (request.postData) {
-        const postData = request.postData;
-        if (postData.mimeType.toLowerCase() === "application/x-www-form-urlencoded") {
-            output += ", data={";
-            output += postData.params.map(p => `${sanitizePython(p.name)}: ${sanitizePython(p.value)}`).join(", ");
-            output += "}";
-        } else if (postData.mimeType.toLowerCase() === "application/json") {
-            output += `, json=${postData.text}`;
-        } else if (postData.mimeType.toLowerCase().startsWith("multipart/form-data")) {
-            output += ", files={";
-            output += postData.params.map(p => `${sanitizePython(p.name)}: (${sanitizePython(p.fileName)}, ${sanitizePython(p.value)}, ${sanitizePython(p.contentType)})`).join(", ");
-            output += "}";
-        } else {
-            output += `, data=${sanitizePython(postData.text)}`;
         }
     }
 
