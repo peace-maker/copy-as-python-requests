@@ -49,7 +49,8 @@ chrome.runtime.onInstalled.addListener(function(details) {
     if (details.reason == "install" || details.reason == "update") {
         chrome.storage.local.set({
             'ignoreResponseContentTypes': ignoreResponseContentTypes,
-            'ignoreHeaders': ignoreHeaders
+            'ignoreHeaders': ignoreHeaders,
+            'hideFailedRequests': true,
         }, function() {
             // Saved.
         });

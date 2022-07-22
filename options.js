@@ -1,11 +1,13 @@
 // In-page cache of the user's options
 let ignoreResponseContentTypes = [];
 let ignoreHeaders = [];
+let hideFailedRequests = true;
 
 // Initialize the form with the user's option settings
-chrome.storage.local.get(['ignoreResponseContentTypes', 'ignoreHeaders'], (data) => {
+chrome.storage.local.get(['ignoreResponseContentTypes', 'ignoreHeaders', 'hideFailedRequests'], (data) => {
     ignoreResponseContentTypes = data.ignoreResponseContentTypes;
     ignoreHeaders = data.ignoreHeaders;
+    hideFailedRequests = data.hideFailedRequests;
     renderOptions();
 });
 
@@ -29,6 +31,7 @@ const addInputFields = (parentId, list) => {
 const renderOptions = () => {
     addInputFields('ignoreResponseContentTypes', ignoreResponseContentTypes);
     addInputFields('ignoreHeaders', ignoreHeaders);
+    document.getElementById('hideFailedRequests').checked = hideFailedRequests;
 }
 
 // Handle the '+' buttons to add more form fields.
@@ -67,7 +70,9 @@ document.getElementById('save').addEventListener('click', (e) => {
         }
     });
 
-    chrome.storage.local.set({'ignoreResponseContentTypes': ignoreResponseContentTypes, 'ignoreHeaders': ignoreHeaders}, () => {
+    hideFailedRequests = document.getElementById('hideFailedRequests').checked;
+
+    chrome.storage.local.set({'ignoreResponseContentTypes': ignoreResponseContentTypes, 'ignoreHeaders': ignoreHeaders, 'hideFailedRequests': hideFailedRequests}, () => {
         document.getElementById('status').innerText = 'Options saved';
     });
 });

@@ -1,6 +1,7 @@
 // In-page cache of the user's options
 let ignoreResponseContentTypes = [];
 let ignoreHeaders = [];
+let hideFailedRequests = true;
 
 // Initialize the request filter settings cache.
 chrome.storage.local.get(['ignoreResponseContentTypes', 'ignoreHeaders'], (data) => {
@@ -16,6 +17,8 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
             ignoreResponseContentTypes = newValue;
         } else if (key === 'ignoreHeaders') {
             ignoreHeaders = newValue;
+        } else if (key === 'hideFailedRequests') {
+            hideFailedRequests = newValue;
         }
     }
 });
@@ -43,9 +46,18 @@ function handleRequest(har_entry) {
             return;
         }
     }
+
+    let output = "";
+    // Maybe extend the list of HTTP status codes that are considered "failed".
+    if ([0, 404].some(code => code === response.status)) {
+        if (hideFailedRequests) {
+            return;
+        }
+        output += `# Request failed: ${response.status} ${response.statusText}\n`;
+    }
     
     const request = har_entry.request;
-    let output = "requests.";
+    output += "requests.";
     const shortcut_methods = ["get", "post", "put", "delete", "head", "patch"];
     if (shortcut_methods.some(method => method === request.method.toLowerCase()))
         output += `${request.method.toLowerCase()}(`;
