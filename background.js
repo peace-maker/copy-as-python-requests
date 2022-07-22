@@ -5,6 +5,7 @@ let browserActionPopup = null;
 
 const ignoreResponseContentTypes = [
     'image/',
+    'video/',
     'text/css',
     'text/javascript',
     'application/javascript',
