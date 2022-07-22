@@ -55,6 +55,10 @@ function handleRequest(har_entry) {
         }
         output += `# Request failed: ${response.status} ${response.statusText}\n`;
     }
+
+    if (response.redirectURL) {
+        output += `# Redirected to: ${response.redirectURL}\n`;
+    }
     
     const request = har_entry.request;
     output += "requests.";
