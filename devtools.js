@@ -50,14 +50,14 @@ class PythonRequestsTransformer {
 
     generateRequestsOutput() {
         let requests = [];
-        if (useSession && this.har.entries.length > 0) {
-            requests.push("s = requests.session()");
-        }
         for (let entry of this.har.entries) {
             const pythonRequest = this.handleEntry(entry);
             if (pythonRequest) {
                 requests.push(pythonRequest);
             }
+        }
+        if (useSession && requests.length > 0) {
+            requests.unshift("s = requests.session()");
         }
         return requests;
     }
