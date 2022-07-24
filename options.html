@@ -7,12 +7,16 @@
     <h1>Copy as Python Requests options</h1>
     <form id="options">
       <h3>Ignored Response Content-Types</h3>
+      <span>Case-insensitive substring matches. Empty fields are ignored.</span>
       <div id="ignoreResponseContentTypes"></div>
-      <button id="addIgnoreResponseContentType">+</button>
+      <button id="addIgnoreResponseContentType" title="Add another ignored response Content-Type.">+</button>
       <h3>Ignored Headers</h3>
+      <span>Exact case-insensitive matches. Empty fields are ignored.</span>
       <div id="ignoreHeaders"></div>
-      <button id="addIgnoreHeader">+</button><br />
-      <input type="checkbox" id="hideFailedRequests" /><label for="hideFailedRequests">Hide Failed Requests</label><br />
+      <button id="addIgnoreHeader" title="Add another ignored header field.">+</button>
+      <h3>Misc</h3>
+      <input type="checkbox" id="hideFailedRequests" /><label for="hideFailedRequests" title="Hide requests with no response or a status code of 404.">Hide Failed Requests</label><br />
+      <br />
       <button id="save">Save</button>
       <span id="status"></span>
     </form>
