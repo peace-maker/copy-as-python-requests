@@ -4,9 +4,10 @@ let ignoreHeaders = [];
 let hideFailedRequests = true;
 
 // Initialize the request filter settings cache.
-chrome.storage.local.get(['ignoreResponseContentTypes', 'ignoreHeaders'], (data) => {
+chrome.storage.local.get(['ignoreResponseContentTypes', 'ignoreHeaders', 'hideFailedRequests'], (data) => {
     ignoreResponseContentTypes = data.ignoreResponseContentTypes;
     ignoreHeaders = data.ignoreHeaders;
+    hideFailedRequests = data.hideFailedRequests;
 });
 
 // Update cache on change.
