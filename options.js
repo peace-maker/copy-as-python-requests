@@ -72,7 +72,11 @@ document.getElementById('save').addEventListener('click', (e) => {
 
     hideFailedRequests = document.getElementById('hideFailedRequests').checked;
 
-    chrome.storage.local.set({'ignoreResponseContentTypes': ignoreResponseContentTypes, 'ignoreHeaders': ignoreHeaders, 'hideFailedRequests': hideFailedRequests}, () => {
+    chrome.storage.local.set({
+        'ignoreResponseContentTypes': ignoreResponseContentTypes,
+        'ignoreHeaders': ignoreHeaders,
+        'hideFailedRequests': hideFailedRequests,
+    }, () => {
         document.getElementById('status').innerText = 'Options saved';
     });
 });

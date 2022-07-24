@@ -1,3 +1,10 @@
+let useSession = true;
+
+chrome.storage.local.get(['useSession'], (data) => {
+    useSession = data.useSession;
+    document.querySelector("#useSession").checked = useSession;
+});
+
 var port = chrome.runtime.connect({
     name: "popup"
 });
@@ -48,6 +55,13 @@ const setCopyButtonVisible = (visible) => {
 function printMessage(message) {
     document.getElementById('msg').innerText = message;
 }
+
+document.querySelector("#useSession").addEventListener("change", function(e) {
+    useSession = e.target.checked;
+    chrome.storage.local.set({"useSession": useSession});
+    // Render requests again using the new setting
+    port.postMessage({"type": "get-requests"});
+});
 
 document.querySelector('#go-to-options').addEventListener('click', function(e) {
     e.preventDefault();

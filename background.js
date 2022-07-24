@@ -51,6 +51,7 @@ chrome.runtime.onInstalled.addListener(function(details) {
             'ignoreResponseContentTypes': ignoreResponseContentTypes,
             'ignoreHeaders': ignoreHeaders,
             'hideFailedRequests': true,
+            'useSession': true,
         }, function() {
             // Saved.
         });
@@ -99,7 +100,7 @@ function handleOpeningBrowserAction(port) {
                         return;
                     }
                     var tab = tabs[0];
-                    console.log(tab.id, devtoolInstances, tab.id in devtoolInstances);
+                    // console.log(tab.id, devtoolInstances, tab.id in devtoolInstances);
                     if (tab.id in devtoolInstances) {
                         devtoolInstances[tab.id].postMessage({type: "get-requests"});
                     } else {
