@@ -29,7 +29,6 @@
     "https://*/*"
   ],
   "browser_action": {
-    "browser_style": true,
     "default_title": "Copy as Python Requests",
     "default_popup": "popup.html"
   }

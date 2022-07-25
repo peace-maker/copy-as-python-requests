@@ -14,10 +14,10 @@
   "minimum_chrome_version": "40.0",
   "devtools_page": "devtools.html",
   "options_ui": {
-    "page": "options.html",
     "browser_style": true,
     "chrome_style": true,
-    "open_in_tab": true
+    "open_in_tab": true,
+    "page": "options.html"
   },
   "background": {
     "service_worker": "background.js"
@@ -30,6 +30,7 @@
     "https://*/*"
   ],
   "action": {
+    "browser_style": true,
     "default_title": "Requests Export to Python",
     "default_popup": "popup.html"
   }
