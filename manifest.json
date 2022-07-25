@@ -1,5 +1,5 @@
 {
-  "name": "Python Requests Export",
+  "name": "Copy as Python Requests",
   "description": "Copy requests from devtools network panel as python requests code",
   "version": "1.0",
   "author": "Jannik Hartung",
@@ -29,8 +29,8 @@
     "https://*/*"
   ],
   "browser_action": {
-    "default_title": "Requests Export to Python",
     "browser_style": true,
+    "default_title": "Copy as Python Requests",
     "default_popup": "popup.html"
   }
 }
