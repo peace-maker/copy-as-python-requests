@@ -1,4 +1,12 @@
+body {
+  margin: 8px;
+}
+
 #container {
   overflow: auto;
   max-height: 400px;
+}
+
+#options {
+  white-space: nowrap;
 }
