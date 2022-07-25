@@ -95,11 +95,11 @@ class PythonRequestsTransformer {
         }
 
         // Hide requests to (probably) static resources.
-        if (response.headers && response.headers.length > 0) {
-            const contentType = response.headers.find(header => header.name.toLowerCase() === 'content-type');
-            if (contentType && ignoreResponseContentTypes.some(ignoreContentType => contentType.value.toLowerCase().startsWith(ignoreContentType))) {
+        if (response.content && response.content.mimeType) {
+            const contentType = response.content.mimeType;
+            if (ignoreResponseContentTypes.some(ignoreContentType => contentType.toLowerCase().startsWith(ignoreContentType))) {
                 if (response.cookies.length > 0) {
-                    output += `# Response would be ignored due to content-type: ${contentType.value}, but left in because the response set cookies.\n`;
+                    output += `# Response would be ignored due to content-type: ${contentType}, but left in because the response set cookies.\n`;
                 } else {
                     return false;
                 }
