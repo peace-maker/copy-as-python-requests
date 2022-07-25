@@ -146,13 +146,14 @@ class PythonRequestsTransformer {
         let stripContentType = true;
         if (request.postData) {
             const postData = request.postData;
-            if (postData.mimeType.toLowerCase().startsWith("application/x-www-form-urlencoded")) {
+            const mimeType = postData.mimeType.toLowerCase();
+            if (mimeType.startsWith("application/x-www-form-urlencoded")) {
                 output += ", data={";
                 output += postData.params.map(p => `${sanitizePython(p.name)}: ${sanitizePython(p.value)}`).join(", ");
                 output += "}";
-            } else if (postData.mimeType.toLowerCase() === "application/json") {
+            } else if (mimeType.startsWith("application/json")) {
                 output += `, json=${postData.text}`;
-            } else if (postData.mimeType.toLowerCase().startsWith("multipart/form-data")) {
+            } else if (mimeType.startsWith("multipart/form-data")) {
                 output += ", files={";
                 output += postData.params.map(p => {
                     const name = sanitizePython(p.name);
@@ -165,6 +166,8 @@ class PythonRequestsTransformer {
                     }
                 }).join(", ");
                 output += "}";
+            } else if (mimeType.startsWith("text/plain")) {
+                output += `, data=${sanitizePython(postData.text)}`;
             } else {
                 // Best effort to convert the request.
                 output += `, data=${sanitizePython(postData.text)}`;
