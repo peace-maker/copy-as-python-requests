@@ -10,6 +10,9 @@ var port = chrome.runtime.connect({
 });
 port.postMessage({"type": "get-requests"});
 port.onMessage.addListener(function(msg) {
+    // Always clear the status message since something new happened.
+    setStatus("");
+
     switch (msg.type) {
         case "no-active-tab":
             setCopyButtonVisible(false);
@@ -38,13 +41,17 @@ port.onMessage.addListener(function(msg) {
 
 document.getElementById('copy').addEventListener('click', function(e) {
     e.preventDefault();
-    const status = document.getElementById('status');
     const text = document.getElementById('msg').innerText;
     navigator.clipboard.writeText(text).then(function() {
-        status.innerText = 'Copied.';
+        setStatus("Copied to clipboard.");
     }, function(err) {
-        status.innerText = 'Could not copy text: ' + err;
+        setStatus('Could not copy text: ' + err);
     });
+});
+
+document.getElementById('refresh').addEventListener('click', function(e) {
+    e.preventDefault();
+    refreshRequests();
 });
 
 const setCopyButtonVisible = (visible) => {
@@ -52,15 +59,25 @@ const setCopyButtonVisible = (visible) => {
     copyButton.style.display = visible ? 'block' : 'none';
 };
 
-function printMessage(message) {
+const printMessage = (message) => {
     document.getElementById('msg').innerText = message;
-}
+};
+
+const setStatus = (message) => {
+    const status = document.getElementById('status');
+    status.innerText = message;
+};
+
+const refreshRequests = () => {
+    setStatus("Refreshing...");
+    port.postMessage({"type": "get-requests"});
+};
 
 document.querySelector("#useSession").addEventListener("change", function(e) {
     useSession = e.target.checked;
     chrome.storage.local.set({"useSession": useSession});
     // Render requests again using the new setting
-    port.postMessage({"type": "get-requests"});
+    refreshRequests();
 });
 
 document.querySelector('#go-to-options').addEventListener('click', function(e) {

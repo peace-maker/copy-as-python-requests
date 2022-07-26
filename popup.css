@@ -10,3 +10,8 @@ body {
 #options {
   white-space: nowrap;
 }
+
+#buttons {
+  display: flex;
+  flex-direction: row;
+}
