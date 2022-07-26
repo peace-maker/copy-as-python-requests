@@ -1,6 +1,6 @@
 {
-  "name": "Python Requests Export",
-  "description": "Copy requests from devtools network panel as python requests code",
+  "name": "Copy as Python Requests",
+  "description": "Copy requests from the devtools network panel as python requests code",
   "version": "1.0",
   "author": "Jannik Hartung",
   "manifest_version": 3,
@@ -15,7 +15,6 @@
   "devtools_page": "devtools.html",
   "options_ui": {
     "browser_style": true,
-    "chrome_style": true,
     "open_in_tab": true,
     "page": "options.html"
   },
@@ -31,7 +30,7 @@
   ],
   "action": {
     "browser_style": true,
-    "default_title": "Requests Export to Python",
+    "default_title": "Copy as Python Requests",
     "default_popup": "popup.html"
   }
 }
