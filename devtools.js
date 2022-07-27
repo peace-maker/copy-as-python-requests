@@ -50,6 +50,8 @@ class PythonRequestsTransformer {
 
     generateRequestsOutput() {
         let requests = [];
+        // Browsers *should* sort the entries ascending by start time, but chrome apparently doesn't.
+        this.har.entries.sort((a, b) => new Date(a.startedDateTime) - new Date(b.startedDateTime));
         for (let entry of this.har.entries) {
             const pythonRequest = this.handleEntry(entry);
             if (pythonRequest) {
