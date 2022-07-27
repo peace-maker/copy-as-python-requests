@@ -24,10 +24,6 @@
   "permissions": [
     "storage"
   ],
-  "host_permissions": [
-    "http://*/*",
-    "https://*/*"
-  ],
   "action": {
     "browser_style": true,
     "default_title": "Copy as Python Requests",

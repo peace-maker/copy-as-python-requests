@@ -28,9 +28,7 @@
     "persistent": false
   },
   "permissions": [
-    "storage",
-    "http://*/*",
-    "https://*/*"
+    "storage"
   ],
   "browser_action": {
     "default_title": "Copy as Python Requests",
