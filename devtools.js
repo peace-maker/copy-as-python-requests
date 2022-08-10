@@ -3,13 +3,15 @@ let ignoreResponseContentTypes = [];
 let ignoreHeaders = [];
 let hideFailedRequests = true;
 let useSession = true;
+let useFunctions = false;
 
 // Initialize the request filter settings cache.
-chrome.storage.local.get(['ignoreResponseContentTypes', 'ignoreHeaders', 'hideFailedRequests', 'useSession'], (data) => {
+chrome.storage.local.get(['ignoreResponseContentTypes', 'ignoreHeaders', 'hideFailedRequests', 'useSession', 'useFunctions'], (data) => {
     ignoreResponseContentTypes = data.ignoreResponseContentTypes;
     ignoreHeaders = data.ignoreHeaders;
     hideFailedRequests = data.hideFailedRequests;
     useSession = data.useSession;
+    useFunctions = data.useFunctions;
 });
 
 // Update cache on change.
@@ -24,6 +26,8 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
             hideFailedRequests = newValue;
         } else if (key === 'useSession') {
             useSession = newValue;
+        } else if (key === 'useFunctions') {
+            useFunctions = newValue;
         }
     }
 });
@@ -74,7 +78,11 @@ class PythonRequestsTransformer {
             return output;
         }
         output += responseOutput;
-        output += this.generateRequestOutput(requestOrigin, request);
+        
+        if (useFunctions === true)
+            output += this.generateRequestOutputWithFunctions(requestOrigin, request);
+        else
+            output += this.generateRequestOutput(requestOrigin, request);
         return output;
     }
 
@@ -125,8 +133,113 @@ class PythonRequestsTransformer {
         }
         return output;
     }
+    
+generateRequestOutput(requestOrigin, request) {
+    let output = "";
+    if (useSession) {
+        output += "s.";
+    } else {
+        output += "requests.";
+    }
+    const shortcut_methods = ["get", "post", "put", "delete", "head", "patch"];
+    if (shortcut_methods.some(method => method === request.method.toLowerCase()))
+        output += `${request.method.toLowerCase()}(`;
+    else
+        output += `request("${request.method}", `;
+    output += `"${stripURLSearchParams(request.url)}"`;
+    if (request.queryString && request.queryString.length > 0) {
+        output += ", params={";
+        output += request.queryString.map(qs => `${sanitizePython(qs.name)}: ${sanitizePython(qs.value)}`).join(", ");
+        output += "}";
+    }
 
-    generateRequestOutput(requestOrigin, request) {
+    let stripContentType = true;
+    if (request.postData) {
+        const postData = request.postData;
+        const mimeType = postData.mimeType.toLowerCase();
+        if (mimeType.startsWith("application/x-www-form-urlencoded")) {
+            output += ", data={";
+            output += postData.params.map(p => `${sanitizePython(p.name)}: ${sanitizePython(p.value)}`).join(", ");
+            output += "}";
+        } else if (mimeType.startsWith("application/json")) {
+            output += `, json=${postData.text}`;
+        } else if (mimeType.startsWith("multipart/form-data")) {
+            output += ", files={";
+            output += postData.params.map(p => {
+                const name = sanitizePython(p.name);
+                const fileName = sanitizePython(p.fileName);
+                const value = sanitizePython(p.value);
+                if (p.contentType) {
+                    return `${name}: (${fileName}, ${value}, ${sanitizePython(p.contentType)})`
+                } else {
+                    return `${name}: (${fileName}, ${value})`
+                }
+            }).join(", ");
+            output += "}";
+        } else if (mimeType.startsWith("text/plain")) {
+            output += `, data=${sanitizePython(postData.text)}`;
+        } else {
+            // Best effort to convert the request.
+            output += `, data=${sanitizePython(postData.text)}`;
+            // Don't know what this is, so don't strip the content type.
+            stripContentType = false;
+        }
+
+        // Preserve transfer codings in the content type like `application/x-www-form-urlencoded; charset=UTF-8`
+        if (postData.mimeType.includes(";")) {
+            // Ignore utf-8 charset, since that's the default.
+            const transferCodings = postData.mimeType.split(";")[1].trim();
+            if (transferCodings.toLowerCase() !== "charset=utf-8") {
+                output = `# Stripped transfer codings. Original Content-Type: ${postData.mimeType}\n${output}`;
+            }
+        }
+    }
+
+    if (request.headers && request.headers.length > 0) {
+        let filteredHeaders = request.headers.filter(h => !ignoreHeaders.some(ignoreHeader => ignoreHeader.toLowerCase() === h.name.toLowerCase()));
+        const authHeader = request.headers.find(h => h.name.toLowerCase() === 'authorization');
+        if (authHeader && authHeader.value.toLowerCase().startsWith('basic')) {
+            try {
+                const auth = atob(authHeader.value.substring(6));
+                const [username, password] = auth.split(':');
+                output += `, auth=(${sanitizePython(username)}, ${sanitizePython(password)})`;
+                filteredHeaders = filteredHeaders.filter(h => h.name.toLowerCase() !== 'authorization');
+            } catch {
+            }
+        }
+        if (stripContentType) {
+            filteredHeaders = filteredHeaders.filter(h => h.name.toLowerCase() !== 'content-type');
+        }
+        filteredHeaders = filteredHeaders.map(h => `${sanitizePython(h.name)}: ${sanitizePython(h.value)}`);
+        if (filteredHeaders.length > 0) {
+            output += ", headers={";
+            output += filteredHeaders.join(", ");
+            output += "}";
+        }
+    }
+
+    const sessionCookies = this.cookies[requestOrigin];
+    let cookies = [];
+    for (let cookie of request.cookies) {
+        if (useSession && sessionCookies.has(cookie.name)) {
+            continue;
+        }
+        cookies.push(cookie);
+    }
+    
+    if (cookies.length > 0) {
+        output += ", cookies={";
+        output += cookies.map(c => `${sanitizePython(c.name)}: ${sanitizePython(c.value)}`).join(", ");
+        output += "}";
+    }
+
+    output += ")";
+    
+    // chrome.devtools.inspectedWindow.eval(`console.log(\`${output}\`)`);
+    return output;
+}
+
+    generateRequestOutputWithFunctions(requestOrigin, request) {
         let stripContentType = true;
         let output = "";
 

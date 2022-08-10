@@ -4,6 +4,11 @@ chrome.storage.local.get(['useSession'], (data) => {
     useSession = data.useSession;
     document.querySelector("#useSession").checked = useSession;
 });
+chrome.storage.local.get(['useFunctions'], (data) => {
+    useFunctions = data.useFunctions;
+    document.querySelector("#useFunctions").checked = useFunctions;
+});
+
 
 var port = chrome.runtime.connect({
     name: "popup"
@@ -76,6 +81,12 @@ const refreshRequests = () => {
 document.querySelector("#useSession").addEventListener("change", function(e) {
     useSession = e.target.checked;
     chrome.storage.local.set({"useSession": useSession});
+    // Render requests again using the new setting
+    refreshRequests();
+});
+document.querySelector("#useFunctions").addEventListener("change", function(e) {
+    useFunctions = e.target.checked;
+    chrome.storage.local.set({"useFunctions": useFunctions});
     // Render requests again using the new setting
     refreshRequests();
 });

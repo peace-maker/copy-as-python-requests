@@ -52,6 +52,7 @@ chrome.runtime.onInstalled.addListener(function(details) {
             'ignoreHeaders': ignoreHeaders,
             'hideFailedRequests': true,
             'useSession': true,
+            'useFunctions': false,
         }, function() {
             // Saved.
         });
