@@ -5,15 +5,17 @@ let ignoreHeaders = [];
 let enableRequestHeaderFilter = true;
 let hideFailedRequests = true;
 let useSession = true;
+let useSeparateLines = false;
 
 // Initialize the request filter settings cache.
-chrome.storage.local.get(['ignoreResponseContentTypes', 'enableResponseContentTypeFilter', 'ignoreHeaders', 'enableRequestHeaderFilter', 'hideFailedRequests', 'useSession'], (data) => {
+chrome.storage.local.get(['ignoreResponseContentTypes', 'enableResponseContentTypeFilter', 'ignoreHeaders', 'enableRequestHeaderFilter', 'hideFailedRequests', 'useSession', 'useSeparateLines'], (data) => {
     ignoreResponseContentTypes = data.ignoreResponseContentTypes;
     enableResponseContentTypeFilter = data.enableResponseContentTypeFilter;
     ignoreHeaders = data.ignoreHeaders;
     enableRequestHeaderFilter = data.enableRequestHeaderFilter;
     hideFailedRequests = data.hideFailedRequests;
     useSession = data.useSession;
+    useSeparateLines = data.useSeparateLines;
 });
 
 // Update cache on change.
@@ -32,6 +34,8 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
             hideFailedRequests = newValue;
         } else if (key === 'useSession') {
             useSession = newValue;
+        } else if (key === 'useSeparateLines') {
+            useSeparateLines = newValue;
         }
     }
 });
@@ -134,6 +138,30 @@ class PythonRequestsTransformer {
         return output;
     }
 
+    generateDict(name, elements) {
+        let output = "";
+        if (useSeparateLines) {
+            if (typeof(elements) === "object") {
+                output += `\n${name}={\n`;
+                for (let elem of elements) {
+                    output += `    ${elem},\n`
+                }
+                output += "}";
+            } else {
+                output += `\n${name}=${elements}`;
+            }
+        } else {
+            if (typeof(elements) === "object") {
+                output += ` ${name}={`;
+                output += elements.join(", ");
+                output += "}";
+            } else {
+                output += ` ${name}=${elements}`;
+            }
+        }
+        return output;
+    }
+
     generateRequestOutput(requestOrigin, request) {
         let output = "";
         if (useSession) {
@@ -148,9 +176,8 @@ class PythonRequestsTransformer {
             output += `request("${request.method}", `;
         output += `"${stripURLSearchParams(request.url)}"`;
         if (request.queryString && request.queryString.length > 0) {
-            output += ", params={";
-            output += request.queryString.map(qs => `${sanitizePython(qs.name)}: ${sanitizePython(qs.value)}`).join(", ");
-            output += "}";
+            const pythonParams = request.queryString.map(qs => `${sanitizePython(qs.name)}: ${sanitizePython(qs.value)}`);
+            output += "," + this.generateDict("params", pythonParams);
         }
 
         let stripContentType = true;
@@ -158,14 +185,12 @@ class PythonRequestsTransformer {
             const postData = request.postData;
             const mimeType = postData.mimeType.toLowerCase();
             if (mimeType.startsWith("application/x-www-form-urlencoded")) {
-                output += ", data={";
-                output += postData.params.map(p => `${sanitizePython(p.name)}: ${sanitizePython(p.value)}`).join(", ");
-                output += "}";
+                const formFields = postData.params.map(p => `${sanitizePython(p.name)}: ${sanitizePython(p.value)}`);
+                output += "," + this.generateDict("data", formFields);
             } else if (mimeType.startsWith("application/json")) {
-                output += `, json=${postData.text}`;
+                output += "," + this.generateDict("json", postData.text);
             } else if (mimeType.startsWith("multipart/form-data")) {
-                output += ", files={";
-                output += postData.params.map(p => {
+                const formFiles = postData.params.map(p => {
                     const name = sanitizePython(p.name);
                     const fileName = sanitizePython(p.fileName);
                     const value = sanitizePython(p.value);
@@ -174,13 +199,13 @@ class PythonRequestsTransformer {
                     } else {
                         return `${name}: (${fileName}, ${value})`
                     }
-                }).join(", ");
-                output += "}";
+                });
+                output += "," + this.generateDict("files", formFiles);
             } else if (mimeType.startsWith("text/plain")) {
-                output += `, data=${sanitizePython(postData.text)}`;
+                output += "," + this.generateDict("data", sanitizePython(postData.text));
             } else {
                 // Best effort to convert the request.
-                output += `, data=${sanitizePython(postData.text)}`;
+                output += "," + this.generateDict("data", sanitizePython(postData.text));
                 // Don't know what this is, so don't strip the content type.
                 stripContentType = false;
             }
@@ -208,7 +233,7 @@ class PythonRequestsTransformer {
                 try {
                     const auth = atob(authHeader.value.substring(6));
                     const [username, password] = auth.split(':');
-                    output += `, auth=(${sanitizePython(username)}, ${sanitizePython(password)})`;
+                    output += "," + this.generateDict("auth", `(${sanitizePython(username)}, ${sanitizePython(password)})`);
                     filteredHeaders = filteredHeaders.filter(h => h.name.toLowerCase() !== 'authorization');
                 } catch {
                 }
@@ -216,11 +241,9 @@ class PythonRequestsTransformer {
             if (stripContentType) {
                 filteredHeaders = filteredHeaders.filter(h => h.name.toLowerCase() !== 'content-type');
             }
-            filteredHeaders = filteredHeaders.map(h => `${sanitizePython(h.name)}: ${sanitizePython(h.value)}`);
             if (filteredHeaders.length > 0) {
-                output += ", headers={";
-                output += filteredHeaders.join(", ");
-                output += "}";
+                filteredHeaders = filteredHeaders.map(h => `${sanitizePython(h.name)}: ${sanitizePython(h.value)}`);
+                output += "," + this.generateDict("headers", filteredHeaders);
             }
         }
 
@@ -234,9 +257,8 @@ class PythonRequestsTransformer {
         }
         
         if (cookies.length > 0) {
-            output += ", cookies={";
-            output += cookies.map(c => `${sanitizePython(c.name)}: ${sanitizePython(c.value)}`).join(", ");
-            output += "}";
+            cookies = cookies.map(c => `${sanitizePython(c.name)}: ${sanitizePython(c.value)}`);
+            output += "," + this.generateDict("cookies", cookies);
         }
 
         output += ")";

@@ -54,6 +54,7 @@ chrome.runtime.onInstalled.addListener(function(details) {
             'enableRequestHeaderFilter': true,
             'hideFailedRequests': true,
             'useSession': true,
+            'useSeparateLines': false,
         }, function() {
             // Saved.
         });

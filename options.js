@@ -4,14 +4,16 @@ let enableResponseContentTypeFilter = true;
 let ignoreHeaders = [];
 let enableRequestHeaderFilter = true;
 let hideFailedRequests = true;
+let useSeparateLines = false;
 
 // Initialize the form with the user's option settings
-chrome.storage.local.get(['ignoreResponseContentTypes', 'enableResponseContentTypeFilter', 'ignoreHeaders', 'enableRequestHeaderFilter', 'hideFailedRequests'], (data) => {
+chrome.storage.local.get(['ignoreResponseContentTypes', 'enableResponseContentTypeFilter', 'ignoreHeaders', 'enableRequestHeaderFilter', 'hideFailedRequests', 'useSeparateLines'], (data) => {
     ignoreResponseContentTypes = data.ignoreResponseContentTypes;
     enableResponseContentTypeFilter = data.enableResponseContentTypeFilter;
     ignoreHeaders = data.ignoreHeaders;
     enableRequestHeaderFilter = data.enableRequestHeaderFilter;
     hideFailedRequests = data.hideFailedRequests;
+    useSeparateLines = data.useSeparateLines;
     renderOptions();
 });
 
@@ -38,6 +40,7 @@ const renderOptions = () => {
     addInputFields('ignoreHeaders', ignoreHeaders);
     document.getElementById('enableRequestHeaderFilter').checked = enableRequestHeaderFilter;
     document.getElementById('hideFailedRequests').checked = hideFailedRequests;
+    document.getElementById('useSeparateLines').checked = useSeparateLines;
 }
 
 // Handle the '+' buttons to add more form fields.
@@ -79,6 +82,7 @@ document.getElementById('save').addEventListener('click', (e) => {
     enableResponseContentTypeFilter = document.getElementById('enableResponseContentTypeFilter').checked;
     enableRequestHeaderFilter = document.getElementById('enableRequestHeaderFilter').checked;
     hideFailedRequests = document.getElementById('hideFailedRequests').checked;
+    useSeparateLines = document.getElementById('useSeparateLines').checked;
 
     chrome.storage.local.set({
         'ignoreResponseContentTypes': ignoreResponseContentTypes,
@@ -86,6 +90,7 @@ document.getElementById('save').addEventListener('click', (e) => {
         'ignoreHeaders': ignoreHeaders,
         'enableRequestHeaderFilter': enableRequestHeaderFilter,
         'hideFailedRequests': hideFailedRequests,
+        'useSeparateLines': useSeparateLines,
     }, () => {
         document.getElementById('status').innerText = 'Options saved';
     });
