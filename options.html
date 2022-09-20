@@ -10,11 +10,13 @@
       <h3>Ignored Response Content-Types</h3>
       <span>Case-insensitive substring matches. Empty fields are ignored.</span>
       <div id="ignoreResponseContentTypes"></div>
-      <button id="addIgnoreResponseContentType" title="Add another ignored response Content-Type.">+</button>
+      <button id="addIgnoreResponseContentType" title="Add another ignored response Content-Type.">+</button><br />
+      <input type="checkbox" id="enableResponseContentTypeFilter" /><label for="enableResponseContentTypeFilter" title="Use above list to filter out requests with a matching response content-type.">Enable Response Content-Type Filter</label>
       <h3>Ignored Headers</h3>
       <span>Exact case-insensitive matches. Empty fields are ignored.</span>
       <div id="ignoreHeaders"></div>
-      <button id="addIgnoreHeader" title="Add another ignored header field.">+</button>
+      <button id="addIgnoreHeader" title="Add another ignored header field.">+</button><br />
+      <input type="checkbox" id="enableRequestHeaderFilter" /><label for="enableRequestHeaderFilter" title="Use above list to filter out headers from requests.">Enable Request Header Filter</label>
       <h3>Misc</h3>
       <input type="checkbox" id="hideFailedRequests" /><label for="hideFailedRequests" title="Hide requests with no response or a status code of 404.">Hide Failed Requests</label><br />
       <br />

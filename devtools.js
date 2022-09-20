@@ -1,13 +1,17 @@
 // In-page cache of the user's options
 let ignoreResponseContentTypes = [];
+let enableResponseContentTypeFilter = true;
 let ignoreHeaders = [];
+let enableRequestHeaderFilter = true;
 let hideFailedRequests = true;
 let useSession = true;
 
 // Initialize the request filter settings cache.
-chrome.storage.local.get(['ignoreResponseContentTypes', 'ignoreHeaders', 'hideFailedRequests', 'useSession'], (data) => {
+chrome.storage.local.get(['ignoreResponseContentTypes', 'enableResponseContentTypeFilter', 'ignoreHeaders', 'enableRequestHeaderFilter', 'hideFailedRequests', 'useSession'], (data) => {
     ignoreResponseContentTypes = data.ignoreResponseContentTypes;
+    enableResponseContentTypeFilter = data.enableResponseContentTypeFilter;
     ignoreHeaders = data.ignoreHeaders;
+    enableRequestHeaderFilter = data.enableRequestHeaderFilter;
     hideFailedRequests = data.hideFailedRequests;
     useSession = data.useSession;
 });
@@ -18,8 +22,12 @@ chrome.storage.onChanged.addListener(function (changes, namespace) {
     for (let [key, { oldValue, newValue }] of Object.entries(changes)) {
         if (key === 'ignoreResponseContentTypes') {
             ignoreResponseContentTypes = newValue;
+        } else if (key === 'enableResponseContentTypeFilter') {
+            enableResponseContentTypeFilter = newValue;
         } else if (key === 'ignoreHeaders') {
             ignoreHeaders = newValue;
+        } else if (key === 'enableRequestHeaderFilter') {
+            enableRequestHeaderFilter = newValue;
         } else if (key === 'hideFailedRequests') {
             hideFailedRequests = newValue;
         } else if (key === 'useSession') {
@@ -80,7 +88,7 @@ class PythonRequestsTransformer {
 
     // Collect cookies that are set by requests in the captured session.
     // We can omit these cookies from the requests output, because they are
-    // set dynamically by a previous reqeust in the session.
+    // set dynamically by a previous request in the session.
     extractCookies(requestOrigin, cookies) {
         // TODO: Obey cookie attributes like Domain or Path
         this.cookies[requestOrigin] = this.cookies[requestOrigin] ?? new Set();
@@ -99,7 +107,7 @@ class PythonRequestsTransformer {
         // Hide requests to (probably) static resources.
         if (response.content && response.content.mimeType) {
             const contentType = response.content.mimeType;
-            if (ignoreResponseContentTypes.some(ignoreContentType => contentType.toLowerCase().startsWith(ignoreContentType))) {
+            if (enableResponseContentTypeFilter && ignoreResponseContentTypes.some(ignoreContentType => contentType.toLowerCase().startsWith(ignoreContentType))) {
                 if (response.cookies.length > 0) {
                     output += `# Response would be ignored due to content-type: ${contentType}, but left in because the response set cookies.\n`;
                 } else {
@@ -188,7 +196,13 @@ class PythonRequestsTransformer {
         }
 
         if (request.headers && request.headers.length > 0) {
-            let filteredHeaders = request.headers.filter(h => !ignoreHeaders.some(ignoreHeader => ignoreHeader.toLowerCase() === h.name.toLowerCase()));
+            let filteredHeaders = request.headers;
+            if (enableRequestHeaderFilter) {
+                filteredHeaders = filteredHeaders.filter(h => !ignoreHeaders.some(ignoreHeader => ignoreHeader.toLowerCase() === h.name.toLowerCase()));
+            } else {
+                // Cookies are handled seperately
+                filteredHeaders = filteredHeaders.filter(h => !['Cookie'].some(ignoreHeader => ignoreHeader.toLowerCase() === h.name.toLowerCase()));
+            }
             const authHeader = request.headers.find(h => h.name.toLowerCase() === 'authorization');
             if (authHeader && authHeader.value.toLowerCase().startsWith('basic')) {
                 try {
