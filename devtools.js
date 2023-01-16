@@ -269,28 +269,40 @@ class PythonRequestsTransformer {
 }
 
 // Create a connection to the background page
-var backgroundPageConnection = chrome.runtime.connect({
-    name: "devtools-page"
-});
+function setupBackgroundConnection() {
+    let backgroundPageConnection = chrome.runtime.connect({
+        name: "devtools-page"
+    });
 
-backgroundPageConnection.onMessage.addListener(function (message) {
-    // Handle responses from the background page, if any
-    switch (message.type) {
-        case "get-requests":
-            chrome.devtools.network.getHAR(function (result) {
-                const transformer = new PythonRequestsTransformer(result);
-                // chrome.devtools.network.onRequestFinished.addListener(handleRequest);
-                backgroundPageConnection.postMessage({"type": "requests", "requests": transformer.generateRequestsOutput(result)});
-            });
-            break;
-        default:
-            chrome.devtools.inspectedWindow.eval(`console.log(\`Unknown message type in devtools.js: ${message.type}\`)`);
-            break;
+    backgroundPageConnection.onMessage.addListener(function (message) {
+        // Handle responses from the background page, if any
+        switch (message.type) {
+            case "get-requests":
+                chrome.devtools.network.getHAR(function (result) {
+                    const transformer = new PythonRequestsTransformer(result);
+                    // chrome.devtools.network.onRequestFinished.addListener(handleRequest);
+                    backgroundPageConnection.postMessage({"type": "requests", "requests": transformer.generateRequestsOutput(result)});
+                });
+                break;
+            default:
+                chrome.devtools.inspectedWindow.eval(`console.log(\`Unknown message type in devtools.js: ${message.type}\`)`);
+                break;
+        }
+    });
+    // Relay the tab ID to the background page
+    backgroundPageConnection.postMessage({
+        type: "init",
+        tabId: chrome.devtools.inspectedWindow.tabId
+    });
+    return backgroundPageConnection;
+}
+
+var backgroundPageConnection = setupBackgroundConnection();
+
+// The background page forgot the tab ID (if the background page reloads), so reconnect
+chrome.runtime.onMessage.addListener(function (message) {
+    if (message.type === "get-port") {
+        backgroundPageConnection.disconnect();
+        backgroundPageConnection = setupBackgroundConnection()
     }
-});
-
-// Relay the tab ID to the background page
-backgroundPageConnection.postMessage({
-    type: "init",
-    tabId: chrome.devtools.inspectedWindow.tabId
 });

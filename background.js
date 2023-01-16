@@ -2,6 +2,7 @@
 // about:debugging#/runtime/this-firefox
 let devtoolInstances = {};
 let browserActionPopup = null;
+let browserActionPopupActiveTab = null;
 
 const ignoreResponseContentTypes = [
     'image/',
@@ -67,6 +68,10 @@ function handleOpeningDevtools(port) {
         switch (message.type) {
             case "init":
                 devtoolInstances[message.tabId] = port;
+                // Trigger a refresh of the requests in the open popup now that we have a connection.
+                if (browserActionPopup && browserActionPopupActiveTab === message.tabId) {
+                    port.postMessage({type: "get-requests"});
+                }
                 break;
             case "requests":
                 // Forward the requests to the popup
@@ -93,6 +98,11 @@ function handleOpeningDevtools(port) {
 }
 
 function handleOpeningBrowserAction(port) {
+    // We don't know of any open devtool instances yet.
+    if (Object.keys(devtoolInstances).length === 0) {
+        chrome.runtime.sendMessage({type: "get-port"}, function() {});
+    }
+
     browserActionPopup = port;
     port.onMessage.addListener(function(msg) {
         switch (msg.type) {
@@ -102,8 +112,8 @@ function handleOpeningBrowserAction(port) {
                         port.postMessage({"type": "no-active-tab"});
                         return;
                     }
-                    var tab = tabs[0];
-                    // console.log(tab.id, devtoolInstances, tab.id in devtoolInstances);
+                    const tab = tabs[0];
+                    browserActionPopupActiveTab = tab.id;
                     if (tab.id in devtoolInstances) {
                         devtoolInstances[tab.id].postMessage({type: "get-requests"});
                     } else {
@@ -112,12 +122,13 @@ function handleOpeningBrowserAction(port) {
                 });
                 break;
             default:
-                console.log("Unknown message type: " + msg.type);
+                console.log("Unknown message type: " + msg);
                 break;
         }
     });
     port.onDisconnect.addListener(function(port) {
         browserActionPopup = null;
+        browserActionPopupActiveTab = null;
     });
 }
 
