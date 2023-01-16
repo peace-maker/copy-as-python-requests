@@ -5,6 +5,10 @@ Copy Requests as Python Requests
 
 WebExtension to export traffic of a tab into ready to go [Python Requests](https://requests.readthedocs.io/en/latest/) calls for faster traffic mimicing.
 
+Published in:
+- [Firefox Browser Add-ons](https://addons.mozilla.org/en-US/firefox/addon/copy-as-python-requests/)
+- [Chrome Web Store](https://chrome.google.com/webstore/detail/copy-as-python-requests/dpmidpbjjakkboiogkpjcfmafjljenhe)
+
 ## Usage
 With the extension installed:
 1. Open the Browser Devtools.
