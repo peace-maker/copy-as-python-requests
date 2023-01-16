@@ -46,10 +46,13 @@ function stripURLSearchParams(urlString) {
     return url.toString();
 }
 
-function sanitizePython(str) {
+function sanitizePython(str, noNone = false) {
     if (str) {
         str = str.replaceAll('\\', '\\\\').replaceAll('\"', '\\\"').replaceAll('\r', '\\r').replaceAll('\n', '\\n');
         return `"${str}"`;
+    }
+    if (noNone) {
+        return '""';
     }
     return 'None';
 }
@@ -190,17 +193,68 @@ class PythonRequestsTransformer {
             } else if (mimeType.startsWith("application/json")) {
                 output += "," + this.generateDict("json", postData.text);
             } else if (mimeType.startsWith("multipart/form-data")) {
-                const formFiles = postData.params.map(p => {
-                    const name = sanitizePython(p.name);
-                    const fileName = sanitizePython(p.fileName);
-                    const value = sanitizePython(p.value);
-                    if (p.contentType) {
-                        return `${name}: (${fileName}, ${value}, ${sanitizePython(p.contentType)})`
-                    } else {
-                        return `${name}: (${fileName}, ${value})`
+                // The browser put the params into the HAR, so we have to parse them ourselves.
+                if (postData.params.length === 0) {
+                    const parameters = mimeType.split(";");
+                    let boundary = parameters.find(o => o.trim().toLowerCase().startsWith("boundary="));
+                    if (boundary) {
+                        boundary = boundary.trim().slice(9);
+                        const parts = postData.text.trimRight(`--${boundary}--\r\n`).split(`--${boundary}\r\n`);
+                        const formFiles = [];
+                        for (let part of parts) {
+                            if (part.length === 0) {
+                                continue;
+                            }
+                            const lines = part.split("\r\n");
+                            let fileName = "";
+                            let contentType = "";
+                            let name = "";
+                            let value = "";
+                            for (let line of lines) {
+                                if (line.startsWith("Content-Disposition: form-data;")) {
+                                    const parameters = line.split(";");
+                                    for (let parameter of parameters) {
+                                        if (parameter.trim().toLowerCase().startsWith("name=")) {
+                                            name = parameter.trim().slice(5).replace(/^"(.*)"$/, "$1");
+                                        } else if (parameter.trim().toLowerCase().startsWith("filename=")) {
+                                            fileName = parameter.trim().slice(9).replace(/^"(.*)"$/, "$1");
+                                        }
+                                    }
+                                } else if (line.startsWith("Content-Type:")) {
+                                    contentType = line.slice(13).trim();
+                                } else if (line === "") {
+                                    value = lines.slice(lines.indexOf(line) + 1, -1).join("\r\n");
+                                }
+                            }
+                            if (fileName) {
+                                if (contentType) {
+                                    formFiles.push(`${sanitizePython(name)}: (${sanitizePython(fileName)}, ${sanitizePython(value, true)}, ${sanitizePython(contentType)})`);
+                                } else {
+                                    formFiles.push(`${sanitizePython(name)}: (${sanitizePython(fileName)}, ${sanitizePython(value, true)})`);
+                                }
+                            } else {
+                                formFiles.push(`${sanitizePython(name)}: ${sanitizePython(value, true)}`);
+                            }
+                        }
+                        output += "," + this.generateDict("files", formFiles);
                     }
-                });
-                output += "," + this.generateDict("files", formFiles);
+                } else {
+                    const formFiles = postData.params.map(p => {
+                        const name = sanitizePython(p.name);
+                        const fileName = sanitizePython(p.fileName);
+                        const value = sanitizePython(p.value, true);
+                        if (p.fileName) {
+                            if (p.contentType) {
+                                return `${name}: (${fileName}, ${value}, ${sanitizePython(p.contentType)})`
+                            } else {
+                                return `${name}: (${fileName}, ${value})`
+                            }
+                        } else {
+                            return `${name}: ${value}`;
+                        }
+                    });
+                    output += "," + this.generateDict("files", formFiles);
+                }
             } else if (mimeType.startsWith("text/plain")) {
                 output += "," + this.generateDict("data", sanitizePython(postData.text));
             } else {
