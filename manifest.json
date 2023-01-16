@@ -1,7 +1,7 @@
 {
   "name": "Copy as Python Requests",
   "description": "Copy requests from the devtools network panel as python requests code",
-  "version": "1.0",
+  "version": "1.1",
   "author": "Jannik Hartung",
   "manifest_version": 2,
   "icons": {
