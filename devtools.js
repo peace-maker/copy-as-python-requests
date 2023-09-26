@@ -48,8 +48,19 @@ function stripURLSearchParams(urlString) {
 
 function sanitizePython(str, noNone = false) {
     if (str) {
-        str = str.replaceAll('\\', '\\\\').replaceAll('\"', '\\\"').replaceAll('\r', '\\r').replaceAll('\n', '\\n');
-        return `"${str}"`;
+        str = encodeURIComponent(str);
+        // Keep plain ascii as is and only hex-encode non-printable chars
+        for (let cc = 0x20; cc < 0x7f; ++cc) {
+            if (cc != 0x25) // %
+                str = str.replaceAll(`%${cc.toString(16).padStart(2, '0').toUpperCase()}`, String.fromCharCode(cc));
+        }
+        str = str.replaceAll('\\', '\\\\').replaceAll('\"', '\\\"').replaceAll('%0D', '\\r').replaceAll('%0A', '\\n').replaceAll('%09', '\\t');
+        const isBytesString = str.indexOf("%") > -1;
+        str = str.replace(/%/g, "\\x");
+        if (isBytesString)
+            return `b"${str}"`;
+        else
+            return `"${str}"`;
     }
     if (noNone) {
         return '""';
@@ -74,7 +85,7 @@ class PythonRequestsTransformer {
             }
         }
         if (useSession && requests.length > 0) {
-            requests.unshift("s = requests.session()");
+            requests.unshift("s = requests.Session()");
         }
         return requests;
     }
@@ -144,7 +155,7 @@ class PythonRequestsTransformer {
     generateDict(name, elements) {
         let output = "";
         if (useSeparateLines) {
-            if (typeof(elements) === "object") {
+            if (typeof (elements) === "object") {
                 output += `\n${name}={\n`;
                 for (let elem of elements) {
                     output += `    ${elem},\n`
@@ -154,7 +165,7 @@ class PythonRequestsTransformer {
                 output += `\n${name}=${elements}`;
             }
         } else {
-            if (typeof(elements) === "object") {
+            if (typeof (elements) === "object") {
                 output += ` ${name}={`;
                 output += elements.join(", ");
                 output += "}";
@@ -191,7 +202,15 @@ class PythonRequestsTransformer {
                 const formFields = postData.params.map(p => `${sanitizePython(p.name)}: ${sanitizePython(p.value)}`);
                 output += "," + this.generateDict("data", formFields);
             } else if (mimeType.startsWith("application/json")) {
-                output += "," + this.generateDict("json", postData.text);
+                try {
+                    // Try to parse the json data to recognize compressed or malformed requests.
+                    JSON.parse(postData.text);
+                    output += "," + this.generateDict("json", postData.text);
+                } catch {
+                    // Keep broken json as is.
+                    stripContentType = false;
+                    output += "," + this.generateDict("data", sanitizePython(postData.text));
+                }
             } else if (mimeType.startsWith("multipart/form-data")) {
                 // The browser put the params into the HAR, so we have to parse them ourselves.
                 if (postData.params.length === 0) {
@@ -309,14 +328,14 @@ class PythonRequestsTransformer {
             }
             cookies.push(cookie);
         }
-        
+
         if (cookies.length > 0) {
             cookies = cookies.map(c => `${sanitizePython(c.name)}: ${sanitizePython(c.value)}`);
             output += "," + this.generateDict("cookies", cookies);
         }
 
         output += ")";
-        
+
         // chrome.devtools.inspectedWindow.eval(`console.log(\`${output}\`)`);
         return output;
     }
@@ -335,7 +354,7 @@ function setupBackgroundConnection() {
                 chrome.devtools.network.getHAR(function (result) {
                     const transformer = new PythonRequestsTransformer(result);
                     // chrome.devtools.network.onRequestFinished.addListener(handleRequest);
-                    backgroundPageConnection.postMessage({"type": "requests", "requests": transformer.generateRequestsOutput(result)});
+                    backgroundPageConnection.postMessage({ "type": "requests", "requests": transformer.generateRequestsOutput(result) });
                 });
                 break;
             default:
