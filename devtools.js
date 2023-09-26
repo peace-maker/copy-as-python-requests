@@ -203,9 +203,25 @@ class PythonRequestsTransformer {
                 output += "," + this.generateDict("data", formFields);
             } else if (mimeType.startsWith("application/json")) {
                 try {
+                    // Python booleans start with an uppercase letter. Awkwardly get them to show up in the output this way.
+                    // Pull requests welcome :D
+                    function replace_bools(key, value) {
+                        if (key === "StupidMarker_True_StupidMarker" || key === "StupidMarker_False_StupidMarker"
+                            || typeof (value) === "string" && (value === "StupidMarker_True_StupidMarker" || value === "StupidMarker_False_StupidMarker"))
+                            throw new Error("can't convert booleans to python");
+
+                        if (typeof (value) !== "boolean")
+                            return value;
+
+                        if (value)
+                            return "StupidMarker_True_StupidMarker";
+                        else
+                            return "StupidMarker_False_StupidMarker";
+                    }
                     // Try to parse the json data to recognize compressed or malformed requests.
-                    JSON.parse(postData.text);
-                    output += "," + this.generateDict("json", postData.text);
+                    let pythonDict = JSON.stringify(JSON.parse(postData.text), replace_bools);
+                    pythonDict = pythonDict.replaceAll('"StupidMarker_True_StupidMarker"', "True").replaceAll('"StupidMarker_False_StupidMarker"', "False")
+                    output += "," + this.generateDict("json", pythonDict);
                 } catch {
                     // Keep broken json as is.
                     stripContentType = false;
