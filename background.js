@@ -32,6 +32,7 @@ const ignoreHeaders = [
     'If-None-Match',
     'Origin',
     'Pragma',
+    'Priority',
     'Referer',
     'Sec-Fetch-Dest',
     'Sec-Fetch-Mode',
